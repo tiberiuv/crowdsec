@@ -310,6 +310,41 @@ func TestStreamStartDecisionDedup(t *testing.T) {
 	assert.Empty(t, decisions["new"])
 }
 
+func TestStreamDedupe(t *testing.T) {
+	lapi := SetupLAPITest(t)
+
+	lapi.InsertAlertFromFile(t, "./tests/alert_duplicate.json")
+
+	w1 := lapi.RecordResponse(t, "GET", "/v1/decisions/stream?startup=true&origins=test&ip=127.0.0.1", emptyBody, APIKEY)
+	decisions, code := readDecisionsStreamResp(t, w1)
+
+	assert.Equal(t, 200, code)
+	assert.Empty(t, decisions["deleted"])
+	assert.Len(t, decisions["new"], 2)
+	assert.Equal(t, *decisions["new"][0].Scenario, "crowdsecurity/test")
+	assert.Equal(t, *decisions["new"][0].Origin, "test")
+	assert.Equal(t, *decisions["new"][1].Scenario, "crowdsecurity/longest")
+	assert.Equal(t, *decisions["new"][1].Origin, "test")
+
+	for _, dec := range decisions["new"] {
+		println(dec.ID, *dec.Value, *dec.Scenario, *dec.Origin)
+	}
+
+
+	w2 := lapi.RecordResponse(t, "GET", "/v1/decisions/stream?startup=true&scenarios_containing=ssh", emptyBody, APIKEY)
+	decisions, code = readDecisionsStreamResp(t, w2)
+
+	assert.Equal(t, 200, code)
+	assert.Empty(t, decisions["deleted"])
+	assert.Len(t, decisions["new"], 2)
+	assert.Equal(t, *decisions["new"][0].Origin, "another_origin")
+	assert.Equal(t, *decisions["new"][1].Origin, "test")
+
+	for _, dec := range decisions["new"] {
+		println(dec.ID, *dec.Value, *dec.Scenario, *dec.Origin)
+	}
+}
+
 type DecisionCheck struct {
 	ID       int64
 	Origin   string

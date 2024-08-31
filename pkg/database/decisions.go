@@ -126,7 +126,7 @@ func (c *Client) QueryAllDecisionsWithFilters(filters map[string][]string) ([]*e
 	)
 	// Allow a bouncer to ask for non-deduplicated results
 	if v, ok := filters["dedup"]; !ok || v[0] != "false" {
-		query = query.Where(longestDecisionForScopeTypeValue)
+		query = query.Where(longestDecision)
 	}
 
 	query, err := BuildDecisionRequestWithFilter(query, filters)
@@ -152,7 +152,7 @@ func (c *Client) QueryExpiredDecisionsWithFilters(filters map[string][]string) (
 	)
 	// Allow a bouncer to ask for non-deduplicated results
 	if v, ok := filters["dedup"]; !ok || v[0] != "false" {
-		query = query.Where(longestDecisionForScopeTypeValue)
+		query = query.Where(longestDecision)
 	}
 
 	query, err := BuildDecisionRequestWithFilter(query, filters)
@@ -227,7 +227,7 @@ func (c *Client) QueryDecisionWithFilter(filter map[string][]string) ([]*ent.Dec
 }
 
 // ent translation of https://stackoverflow.com/a/28090544
-func longestDecisionForScopeTypeValue(s *sql.Selector) {
+func longestDecision(s *sql.Selector) {
 	t := sql.Table(decision.Table)
 	s.LeftJoin(t).OnP(sql.And(
 		sql.ColumnsEQ(
@@ -241,6 +241,14 @@ func longestDecisionForScopeTypeValue(s *sql.Selector) {
 		sql.ColumnsEQ(
 			t.C(decision.FieldScope),
 			s.C(decision.FieldScope),
+		),
+		sql.ColumnsEQ(
+			t.C(decision.FieldScenario),
+			s.C(decision.FieldScenario),
+		),
+		sql.ColumnsEQ(
+			t.C(decision.FieldOrigin),
+			s.C(decision.FieldOrigin),
 		),
 		sql.ColumnsGT(
 			t.C(decision.FieldUntil),
@@ -265,7 +273,7 @@ func (c *Client) QueryExpiredDecisionsSinceWithFilters(since *time.Time, filters
 
 	// Allow a bouncer to ask for non-deduplicated results
 	if v, ok := filters["dedup"]; !ok || v[0] != "false" {
-		query = query.Where(longestDecisionForScopeTypeValue)
+		query = query.Where(longestDecision)
 	}
 
 	query, err := BuildDecisionRequestWithFilter(query, filters)
@@ -296,7 +304,7 @@ func (c *Client) QueryNewDecisionsSinceWithFilters(since *time.Time, filters map
 
 	// Allow a bouncer to ask for non-deduplicated results
 	if v, ok := filters["dedup"]; !ok || v[0] != "false" {
-		query = query.Where(longestDecisionForScopeTypeValue)
+		query = query.Where(longestDecision)
 	}
 
 	query, err := BuildDecisionRequestWithFilter(query, filters)
